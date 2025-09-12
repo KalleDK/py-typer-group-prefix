@@ -12,7 +12,7 @@ from typing import (
 import typer
 import typer_di
 
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 
 class TyperPrefix(NamedTuple):
