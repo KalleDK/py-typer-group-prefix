@@ -149,8 +149,8 @@ def _config_parser(
 
 
 CLI_CONFIG = TyperGroup(
-    default_panel=DEFAULT_PANEL,
-    default_prefix=DEFAULT_PREFIX,
+    panel=DEFAULT_PANEL,
+    env_prefix=DEFAULT_PREFIX,
     parser=_config_parser,
 )
 
@@ -191,9 +191,7 @@ def make_typer(
 
     @app.command("new")
     def cli_new(  # pyright: ignore[reportUnusedFunction]
-        config: Config = CLI_CONFIG.with_options(
-            prefix="def", extra_env_prefix="QWE", panel="PANEL_NEW"
-        )(),
+        config: Config = CLI_CONFIG.with_options(prefix="abc", panel="PANEL_NEW")(),
         server: str = "fds",
         _logging: None | int = Depends(get_logging),
     ) -> None:
@@ -202,12 +200,8 @@ def make_typer(
 
     @app.command("version")
     def cli_version(  # pyright: ignore[reportUnusedFunction]
-        config: Config = CLI_CONFIG.with_options(
-            prefix="abc", extra_env_prefix="DFSFDS", panel="PANEL"
-        )(),
-        config2: Config = CLI_CONFIG.with_options(
-            prefix="qwe", extra_env_prefix="QWE", panel="PANEL_NEW"
-        )(),
+        config: Config = CLI_CONFIG(),
+        config2: Config = CLI_CONFIG.with_options(prefix="qwe", panel="PANEL_NEW")(),
         _logging: None | LogLevel = Depends(get_logging),
     ):
         """Show the version."""
