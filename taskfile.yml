@@ -1,0 +1,22 @@
+# yaml-language-server: $schema=https://taskfile.dev/schema.json
+version: '3'
+
+tasks:
+  sync:
+    cmds:
+      - uv sync --group example
+  bump:
+    vars:
+      PART: '{{ .PART | default "build"}}'
+    cmds:
+      - bump-my-version bump {{ .PART }}
+      - task: sync
+  publish:
+    cmds:
+      - git push
+  devrel:
+    cmds:
+      - git add .
+      - if git commit --dry-run --short; then git commit -m "devrel"; else echo nothing changed; fi
+      - task: bump
+      - task: publish
