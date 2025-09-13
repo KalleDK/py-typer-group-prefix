@@ -1,5 +1,6 @@
 import copy
 import dataclasses
+import inspect
 from collections.abc import Callable, Sequence
 from functools import wraps
 from typing import (
@@ -13,9 +14,13 @@ from typing import (
 import typer
 import typer_di
 
-import inspect
+__version__ = "0.1.3"
 
-__version__ = "0.1.2"
+
+class Replacements(NamedTuple):
+    default: str
+    extra: tuple[str, ...]
+    name: str
 
 
 class TyperPrefix(NamedTuple):
@@ -56,14 +61,23 @@ class TyperPrefix(NamedTuple):
 
         values = tuple(values or ())
         if self.cli_val is None:
-            return value, values
+            parsed_values = (value, *values)
+            return Replacements(
+                default=parsed_values[0],
+                extra=parsed_values[1:],
+                name=parsed_values[-1].replace("-", "_").lower().strip("_"),
+            )
 
         values = tuple(x for x in (value, *values) if x.startswith("--"))
         if not values:
             raise ValueError("No long args found")
 
         parsed_values = tuple(f"--{self.cli_val}{value[2:]}" for value in values)
-        return parsed_values[-1].replace("-", "_").lower().strip("_"), parsed_values[0], parsed_values[1:]
+        return Replacements(
+            default=parsed_values[0],
+            extra=parsed_values[1:],
+            name=parsed_values[-1].replace("-", "_").lower().strip("_"),
+        )
 
     @classmethod
     def from_prefix(
@@ -104,6 +118,7 @@ T = TypeVar("T")
 
 _prefixes_nr = 0
 
+
 @dataclasses.dataclass(slots=True)
 class TyperArgsGroup(Generic[T]):
     default_panel: str
@@ -133,7 +148,6 @@ class TyperArgsGroup(Generic[T]):
         ).build()
 
     def build(self) -> T:
-
         tp = TyperPrefix.from_prefix(
             prefix=self.prefix,
             extra_env_prefix=self.extra_env_prefix,
@@ -141,38 +155,38 @@ class TyperArgsGroup(Generic[T]):
             panel=self.panel,
             default_panel=self.default_panel,
         )
-        
-        signature = copy.deepcopy(inspect.signature(self.parser))
-        
 
-        parameters = []
-        
+        signature = copy.deepcopy(inspect.signature(self.parser))
+
+        parameters: list[inspect.Parameter] = []
+
         kwargs_new_names: dict[str, str] = {}
-        
+
         for parameter in signature.parameters.values():
             for info in parameter.annotation.__metadata__:
                 if isinstance(info, typer.models.OptionInfo):
                     info.rich_help_panel = tp.panel
-                    kw_name, info.default, info.param_decls = tp.args(
-                        info.default, info.param_decls
-                    )
+                    replacements = tp.args(info.default, info.param_decls)
+                    info.default = replacements.default
+                    info.param_decls = replacements.extra
                     info.envvar = tp.env(info.envvar)
                     break
             else:
-                raise ValueError(f"No Option found for {parameter.name} in {self.parser}")
-            kwargs_new_names[kw_name] = parameter.name
-            parameter = parameter.replace(name=kw_name)
+                raise ValueError(
+                    f"No Option found for {parameter.name} in {self.parser}"
+                )
+            kwargs_new_names[replacements.name] = parameter.name
+            parameter = parameter.replace(name=replacements.name)
             parameters.append(parameter)
-        
+
         signature = signature.replace(parameters=parameters)
-        
 
         @wraps(self.parser)
         def _wrapper(*args: Any, **kwargs: Any) -> T:
             kwargs = {kwargs_new_names[kw]: val for kw, val in kwargs.items()}
             return self.parser(*args, **kwargs)
-        
+
         setattr(_wrapper, "__signature__", signature)
         delattr(_wrapper, "__wrapped__")
-        
+
         return typer_di.Depends(_wrapper)
