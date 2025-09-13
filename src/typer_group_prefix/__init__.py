@@ -1,3 +1,4 @@
+import copy
 import dataclasses
 from collections.abc import Callable, Sequence
 from functools import wraps
@@ -12,7 +13,9 @@ from typing import (
 import typer
 import typer_di
 
-__version__ = "0.1.1"
+import inspect
+
+__version__ = "0.1.2"
 
 
 class TyperPrefix(NamedTuple):
@@ -60,7 +63,7 @@ class TyperPrefix(NamedTuple):
             raise ValueError("No long args found")
 
         parsed_values = tuple(f"--{self.cli_val}{value[2:]}" for value in values)
-        return parsed_values[0], parsed_values[1:]
+        return parsed_values[-1].replace("-", "_").lower().strip("_"), parsed_values[0], parsed_values[1:]
 
     @classmethod
     def from_prefix(
@@ -99,6 +102,7 @@ class TyperPrefix(NamedTuple):
 
 T = TypeVar("T")
 
+_prefixes_nr = 0
 
 @dataclasses.dataclass(slots=True)
 class TyperArgsGroup(Generic[T]):
@@ -129,9 +133,6 @@ class TyperArgsGroup(Generic[T]):
         ).build()
 
     def build(self) -> T:
-        @wraps(self.parser)
-        def _wrapper(*args: Any, **kwargs: Any) -> T:
-            return self.parser(*args, **kwargs)
 
         tp = TyperPrefix.from_prefix(
             prefix=self.prefix,
@@ -140,21 +141,38 @@ class TyperArgsGroup(Generic[T]):
             panel=self.panel,
             default_panel=self.default_panel,
         )
+        
+        signature = copy.deepcopy(inspect.signature(self.parser))
+        
 
-        for key, val in _wrapper.__annotations__.items():
-            if key == "return":
-                continue
-
-            for info in val.__metadata__:
+        parameters = []
+        
+        kwargs_new_names: dict[str, str] = {}
+        
+        for parameter in signature.parameters.values():
+            for info in parameter.annotation.__metadata__:
                 if isinstance(info, typer.models.OptionInfo):
                     info.rich_help_panel = tp.panel
-                    info.default, info.param_decls = tp.args(
+                    kw_name, info.default, info.param_decls = tp.args(
                         info.default, info.param_decls
                     )
                     info.envvar = tp.env(info.envvar)
-
                     break
             else:
-                raise ValueError(f"No Option found for {key} in {_wrapper}")
+                raise ValueError(f"No Option found for {parameter.name} in {self.parser}")
+            kwargs_new_names[kw_name] = parameter.name
+            parameter = parameter.replace(name=kw_name)
+            parameters.append(parameter)
+        
+        signature = signature.replace(parameters=parameters)
+        
 
+        @wraps(self.parser)
+        def _wrapper(*args: Any, **kwargs: Any) -> T:
+            kwargs = {kwargs_new_names[kw]: val for kw, val in kwargs.items()}
+            return self.parser(*args, **kwargs)
+        
+        setattr(_wrapper, "__signature__", signature)
+        delattr(_wrapper, "__wrapped__")
+        
         return typer_di.Depends(_wrapper)

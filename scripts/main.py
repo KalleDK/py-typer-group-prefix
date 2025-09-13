@@ -75,7 +75,7 @@ def _config_parser(
             envvar="SERVER",
             show_default=False,
         ),
-    ],
+    ] = "s",
     scep_username: Annotated[
         str,
         typer.Option(
@@ -84,7 +84,7 @@ def _config_parser(
             envvar="USERNAME",
             show_default=False,
         ),
-    ],
+    ] = "u",
     scep_password: Annotated[
         str,
         typer.Option(
@@ -96,7 +96,7 @@ def _config_parser(
             parser=str,
             show_default=False,
         ),
-    ],
+    ] = "p",
     scep_insecure: Annotated[
         bool,
         typer.Option(
@@ -131,15 +131,15 @@ def _config_parser(
     netloc_parts = parts.netloc.split(":", 1)
     if len(netloc_parts) == 2:
         hostname, port = netloc_parts
-        port = int(port)
+        _port = int(port)
     else:
         hostname = netloc_parts[0]
-        port = None
+        _port = None
 
     return Config(
         scheme=Scheme(parts.scheme),
         hostname=hostname,
-        port=port,
+        port=_port,
         username=scep_username,
         password=scep_password,
         insecure=scep_insecure,
@@ -189,13 +189,11 @@ def make_typer(
 ) -> TyperDI:
     app = TyperDI()
 
-    cli_config = CLI_CONFIG.with_options(
-        prefix=prefix, extra_env_prefix=env_prefix, panel=panel
-    )
+    
 
     @app.command("new")
     def cli_new(  # pyright: ignore[reportUnusedFunction]
-        config: Config = cli_config,
+        config: Config = CLI_CONFIG.with_options(prefix="def", extra_env_prefix="QWE", panel="PANEL_NEW"),
         server: str = "fds",
         _logging: None | int = Depends(get_logging),
     ) -> None:
@@ -204,12 +202,19 @@ def make_typer(
 
     @app.command("version")
     def cli_version(  # pyright: ignore[reportUnusedFunction]
+        
+        config: Config = CLI_CONFIG.with_options(
+            prefix="abc", extra_env_prefix="DFSFDS", panel="PANEL"
+        ),
+        config2: Config = CLI_CONFIG.with_options(prefix="qwe", extra_env_prefix="QWE", panel="PANEL_NEW"),
         _logging: None | LogLevel = Depends(get_logging),
     ):
         """Show the version."""
         console = Console()
         logging.getLogger(__name__).debug("Showing version")
         console.print(f"[bold]Version:[/bold] {__version__} at {_logging!r}")
+        console.print(config)
+        console.print(config2)
 
     return app
 
