@@ -14,7 +14,7 @@ from typing import (
 import typer
 import typer_di
 
-__version__ = "0.1.3"
+__version__ = "0.1.4"
 
 
 class Replacements(NamedTuple):
@@ -27,6 +27,7 @@ class TyperPrefix(NamedTuple):
     cli_val: str | None
     env_val: str | None
     panel: str
+    keep_short: bool = False
 
     @staticmethod
     def clean_prefix(value: str | None) -> str | None:
@@ -67,8 +68,15 @@ class TyperPrefix(NamedTuple):
                 extra=parsed_values[1:],
                 name=parsed_values[-1].replace("-", "_").lower().strip("_"),
             )
+        values_1 = tuple(v for v in (value, *values) if v.startswith("--"))
+        if self.keep_short:
+            values_2 = tuple(v for v in (value, *values) if not v.startswith("--"))
+            values = tuple(
+                (x if x.startswith("--") else f"-{x}") for x in (*values_1, *values_2)
+            )
+        else:
+            values = values_1
 
-        values = tuple(x for x in (value, *values) if x.startswith("--"))
         if not values:
             raise ValueError("No long args found")
 
