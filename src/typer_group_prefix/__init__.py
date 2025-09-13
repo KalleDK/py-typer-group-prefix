@@ -14,7 +14,7 @@ from typing import (
 import typer
 import typer_di
 
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 
 class Replacements(NamedTuple):
@@ -124,11 +124,9 @@ class TyperPrefix(NamedTuple):
 
 T = TypeVar("T")
 
-_prefixes_nr = 0
-
 
 @dataclasses.dataclass(slots=True)
-class TyperArgsGroup(Generic[T]):
+class TyperGroup(Generic[T]):
     default_panel: str
     default_prefix: str
     parser: Callable[..., T]
@@ -145,15 +143,15 @@ class TyperArgsGroup(Generic[T]):
         panel: str | None = None,
         prefix: str | None = None,
         extra_env_prefix: str | None = None,
-    ) -> T:
-        return TyperArgsGroup(
+    ) -> "TyperGroup[T]":
+        return TyperGroup(
             default_panel=self.default_panel,
             default_prefix=self.default_prefix,
             parser=self.parser,
             panel=panel,
             prefix=prefix,
             extra_env_prefix=extra_env_prefix,
-        ).build()
+        )
 
     def build(self) -> T:
         tp = TyperPrefix.from_prefix(
