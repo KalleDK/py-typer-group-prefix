@@ -14,7 +14,7 @@ from typing import (
 import typer
 import typer_di
 
-__version__ = "0.1.5"
+__version__ = "0.1.5.1"
 
 
 class Replacements(NamedTuple):
