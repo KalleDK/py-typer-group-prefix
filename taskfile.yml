@@ -13,7 +13,7 @@ tasks:
       - task: sync
   publish:
     cmds:
-      - git push
+      - git push --follow-tags
   devrel:
     cmds:
       - git add .
