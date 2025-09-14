@@ -20,3 +20,8 @@ tasks:
       - if git commit --dry-run --short; then git commit -m "devrel"; else echo nothing changed; fi
       - task: bump
       - task: publish
+  release:
+    cmds:
+      - task: bump
+        vars: { PART: patch }
+      - task: publish
