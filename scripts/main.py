@@ -66,7 +66,34 @@ class Config:
     timeout: timedelta = DEFAULT_HTTPX_TIMEOUT
 
 
+class LogLevel(enum.IntEnum):
+    DEBUG = logging.DEBUG
+    INFO = logging.INFO
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
+    CRITICAL = logging.CRITICAL
+
+
+def get_logs(
+    verboses: Annotated[int, typer.Option("--verboses", "-y", count=True)] = 0,
+    quiets: Annotated[bool, typer.Option("--quiets")] = False,
+) -> None | LogLevel:
+    if quiets:
+        return None
+
+    if verboses == 0:
+        level = LogLevel.WARNING
+    elif verboses == 1:
+        level = LogLevel.INFO
+    else:
+        level = LogLevel.DEBUG
+    logging.basicConfig(level=level)
+
+    return level
+
+
 def _config_parser(
+    scep_logs: None | LogLevel = Depends(get_logs),
     scep_server: Annotated[
         str,
         typer.Option(
@@ -116,6 +143,7 @@ def _config_parser(
         ),
     ] = DEFAULT_CAPATH,
 ) -> Config:
+    print(scep_logs)
     parts = urllib.parse.urlsplit(scep_server)
     if not is_scheme(parts.scheme):
         parts = urllib.parse.urlsplit(
@@ -153,14 +181,6 @@ CLI_CONFIG = TyperGroup(
     env_prefix=DEFAULT_PREFIX,
     parser=_config_parser,
 )
-
-
-class LogLevel(enum.IntEnum):
-    DEBUG = logging.DEBUG
-    INFO = logging.INFO
-    WARNING = logging.WARNING
-    ERROR = logging.ERROR
-    CRITICAL = logging.CRITICAL
 
 
 def get_logging(

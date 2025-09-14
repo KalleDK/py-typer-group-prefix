@@ -18,6 +18,9 @@ import typer_di
 __version__ = "0.1.5.6"
 
 
+T = TypeVar("T")
+
+
 class Replacements(NamedTuple):
     name: str
     default: str
@@ -113,18 +116,35 @@ class TyperPrefix:
         parameters: list[inspect.Parameter] = []
 
         for parameter in signature.parameters.values():
-            for info in parameter.annotation.__metadata__:
-                if isinstance(info, typer.models.OptionInfo):
-                    new_name = self.update_info(info)
-                    break
+            if isinstance(parameter.default, typer_di.DependsType):
+                wrapped_parser = self.wrap_parser(parameter.default.callback)
+                parameter = parameter.replace(default=wrapped_parser)
+                new_name = parameter.name
             else:
-                raise ValueError(f"No Option found for {parameter.name} in {fn}")
+                for info in parameter.annotation.__metadata__:
+                    if isinstance(info, typer.models.OptionInfo):
+                        new_name = self.update_info(info)
+                        break
+                else:
+                    raise ValueError(f"No Option found for {parameter.name} in {fn}")
 
             kwargs_names[new_name] = parameter.name
             parameter = parameter.replace(name=new_name)
             parameters.append(parameter)
 
         return signature.replace(parameters=parameters), kwargs_names
+
+    def wrap_parser(self, parser: Callable[..., T]) -> T:
+        signature, kwargs_new_names = self.create_signature(parser)
+
+        @wraps(parser)
+        def _wrapper(*args: Any, **kwargs: Any) -> T:
+            kwargs = {kwargs_new_names[kw]: val for kw, val in kwargs.items()}
+            return parser(*args, **kwargs)
+
+        setattr(_wrapper, "__signature__", signature)
+        delattr(_wrapper, "__wrapped__")
+        return typer_di.Depends(_wrapper)
 
     @classmethod
     def from_prefix(
@@ -184,9 +204,6 @@ class TyperPrefix:
             panel=_panel,
             keep_short=keep_short,
         )
-
-
-T = TypeVar("T")
 
 
 def _calc_panel(current: str, new: str | NotSet, prepend: bool) -> str:
@@ -285,15 +302,4 @@ class TyperGroup(Generic[T]):
             panel=self.panel,
             keep_short=self.keep_short,
         )
-
-        signature, kwargs_new_names = tp.create_signature(self.parser)
-
-        @wraps(self.parser)
-        def _wrapper(*args: Any, **kwargs: Any) -> T:
-            kwargs = {kwargs_new_names[kw]: val for kw, val in kwargs.items()}
-            return self.parser(*args, **kwargs)
-
-        setattr(_wrapper, "__signature__", signature)
-        delattr(_wrapper, "__wrapped__")
-
-        return typer_di.Depends(_wrapper)
+        return tp.wrap_parser(self.parser)
