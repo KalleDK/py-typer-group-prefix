@@ -7,7 +7,6 @@ from functools import wraps
 from typing import (
     Any,
     Generic,
-    Literal,
     NamedTuple,
     Self,
     TypeVar,
@@ -30,7 +29,6 @@ class NotSet(enum.Enum):
     NOTSET = enum.auto()
 
 
-NOTSET_T = Literal[NotSet.NOTSET]
 NOTSET = NotSet.NOTSET
 
 
@@ -135,10 +133,10 @@ class TyperPrefix:
         default_prefix: str | None = None,
         default_cli_prefix: str | None = None,
         default_env_prefix: str | None = None,
-        panel: str | NOTSET_T = NOTSET,
-        prefix: str | None | NOTSET_T = NOTSET,
-        cli_prefix: str | None | NOTSET_T = NOTSET,
-        env_prefix: str | None | NOTSET_T = NOTSET,
+        panel: str | NotSet = NOTSET,
+        prefix: str | None | NotSet = NOTSET,
+        cli_prefix: str | None | NotSet = NOTSET,
+        env_prefix: str | None | NotSet = NOTSET,
         keep_short: bool = False,
     ) -> Self:
         _panel = panel if panel is not NOTSET else default_panel
@@ -160,8 +158,8 @@ class TyperPrefix:
             return value.upper()
 
         def find_prefix(
-            specific: str | None | NOTSET_T,
-            general: str | None | NOTSET_T,
+            specific: str | None | NotSet,
+            general: str | None | NotSet,
             default_specific: str | None,
             default_general: str | None,
         ) -> str | None:
@@ -191,7 +189,7 @@ class TyperPrefix:
 T = TypeVar("T")
 
 
-def _calc_panel(current: str, new: str | NOTSET_T, prepend: bool) -> str:
+def _calc_panel(current: str, new: str | NotSet, prepend: bool) -> str:
     if new is NOTSET:
         return current
     if not prepend:
@@ -200,7 +198,7 @@ def _calc_panel(current: str, new: str | NOTSET_T, prepend: bool) -> str:
 
 
 def _calc_prefix(
-    current: str | None, new: str | None | NOTSET_T, prepend: bool
+    current: str | None, new: str | None | NotSet, prepend: bool
 ) -> str | None:
     if new is NOTSET:
         return current
@@ -214,12 +212,12 @@ def _calc_prefix(
 
 
 def _calc_specific_prefix(
-    current: str | None | NOTSET_T,
-    new: str | None | NOTSET_T,
-    new_default: str | None | NOTSET_T,
+    current: str | None | NotSet,
+    new: str | None | NotSet,
+    new_default: str | None | NotSet,
     prepend: bool,
     prepend_default: bool,
-) -> str | None | NOTSET_T:
+) -> str | None | NotSet:
     if new is NOTSET:
         if current is NOTSET:
             return NOTSET
@@ -242,8 +240,8 @@ def _calc_specific_prefix(
 class TyperGroup(Generic[T]):
     panel: str
     prefix: str | None = None
-    env_prefix: str | None | NOTSET_T = NOTSET
-    cli_prefix: str | None | NOTSET_T = NOTSET
+    env_prefix: str | None | NotSet = NOTSET
+    cli_prefix: str | None | NotSet = NOTSET
     keep_short: bool = False
     parser: Callable[..., T]
 
@@ -253,15 +251,15 @@ class TyperGroup(Generic[T]):
     def with_options(
         self,
         *,
-        panel: str | NOTSET_T = NOTSET,
-        prefix: str | None | NOTSET_T = NOTSET,
-        cli_prefix: str | None | NOTSET_T = NOTSET,
-        env_prefix: str | None | NOTSET_T = NOTSET,
+        panel: str | NotSet = NOTSET,
+        prefix: str | None | NotSet = NOTSET,
+        cli_prefix: str | None | NotSet = NOTSET,
+        env_prefix: str | None | NotSet = NOTSET,
         prepend_panel: bool = False,
         prepend_prefix: bool = False,
         prepend_env_prefix: bool = False,
         prepend_cli_prefix: bool = False,
-        keep_short: bool | NOTSET_T = NOTSET,
+        keep_short: bool | NotSet = NOTSET,
     ) -> "TyperGroup[T]":
         return TyperGroup(
             panel=_calc_panel(self.panel, panel, prepend_panel),
