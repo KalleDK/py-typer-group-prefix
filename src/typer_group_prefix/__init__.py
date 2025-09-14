@@ -54,6 +54,7 @@ class TyperPrefix:
     env_prefix: str | None
     panel: str
     keep_short: bool = False
+    keep_panels: bool = False
 
     def __post_init__(self):
         if self.cli_prefix is not None:
@@ -104,7 +105,8 @@ class TyperPrefix:
 
     def update_info(self, info: typer.models.OptionInfo):
         info.envvar = self.make_env(info)
-        info.rich_help_panel = self.panel
+        if info.rich_help_panel is None or self.keep_panels is False:
+            info.rich_help_panel = self.panel
         _args = self.make_args(info)
         set_args(info, _args)
         return _args[-1].replace("-", "_").lower().strip("_")
@@ -262,6 +264,7 @@ class TyperGroup(Generic[T]):
     env_prefix: str | None | NotSet = NOTSET
     cli_prefix: str | None | NotSet = NOTSET
     keep_short: bool = False
+    keep_panels: bool = False
     parser: Callable[..., T]
 
     def __call__(self) -> T:
@@ -303,5 +306,6 @@ class TyperGroup(Generic[T]):
             else self.prefix,
             panel=self.panel,
             keep_short=self.keep_short,
+            keep_panels=self.keep_panels,
         )
         return tp.wrap_parser(self.parser)
