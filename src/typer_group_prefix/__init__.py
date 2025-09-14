@@ -87,7 +87,9 @@ class TyperPrefix:
 
     def make_args(self, info: typer.models.OptionInfo):
         if self.cli_prefix is None:
-            return get_args(info)
+            return tuple(
+                arg for arg in get_args(info) if arg.startswith("--") or self.keep_short
+            )
 
         _args = tuple(
             f"--{self.cli_prefix}-{arg.strip('-')}"
