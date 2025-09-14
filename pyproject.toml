@@ -1,6 +1,6 @@
 [project]
 name = "typer-group-prefix"
-version = "0.1.5.11"
+version = "0.1.5.12"
 description = "Prefix handler for typer group options"
 readme = "README.md"
 authors = [
