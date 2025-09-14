@@ -15,7 +15,7 @@ from typing import (
 import typer
 import typer_di
 
-__version__ = "0.1.5.12"
+__version__ = "0.1.6"
 
 
 T = TypeVar("T")
