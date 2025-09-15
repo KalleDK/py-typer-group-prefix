@@ -132,7 +132,7 @@ wheels = [
 
 [[package]]
 name = "typer-group-prefix"
-version = "0.1.0"
+version = "0.1.6.2"
 source = { editable = "." }
 dependencies = [
     { name = "typer-di" },
