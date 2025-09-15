@@ -10,10 +10,10 @@ tasks:
       - uv run pytest -v
   sync:
     cmds:
-      - uv sync --group test --group stubs
+      - uv sync --group test --group stubs --group example
   update:
     cmds:
-      - uv sync -U --group test --group stubs
+      - uv sync -U --group test --group stubs --group example
   lint:
     cmds:
       - uv run ruff check
