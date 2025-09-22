@@ -19,7 +19,7 @@ import typer_di
 
 from typer_group_prefix.parsers import DEFAULT_PARSERS
 
-__version__ = "0.1.9"
+__version__ = "0.1.9.1"
 
 
 T = TypeVar("T")

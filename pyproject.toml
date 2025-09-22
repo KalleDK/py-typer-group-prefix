@@ -1,6 +1,6 @@
 [project]
 name = "typer-group-prefix"
-version = "0.1.9"
+version = "0.1.9.1"
 description = "Add Prefixes to Typer Groups"
 readme = "README.md"
 requires-python = ">=3.11"
