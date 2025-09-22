@@ -13,7 +13,7 @@ from rich.console import Console
 from typer_di import Depends, TyperDI
 
 from typer_group_prefix import (
-    TyperDataGroup,
+    TyperGroupFromDataclass,
     __version__,
 )
 
@@ -95,11 +95,11 @@ def get_logs(
     return level
 
 
-CLI_CONFIG = TyperDataGroup(
+CLI_CONFIG = TyperGroupFromDataclass(
     clss=Config,
     panel=DEFAULT_PANEL,
     env_prefix=DEFAULT_PREFIX,
-).build()
+)
 
 
 def get_logging(

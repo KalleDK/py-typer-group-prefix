@@ -292,7 +292,7 @@ class TyperGroup(Generic[T]):
 
 
 @dataclasses.dataclass(slots=True, kw_only=True)
-class TyperDataGroup(Generic[T]):
+class _TyperDataGroup(Generic[T]):
     panel: str
     prefix: str | None = None
     env_prefix: str | None | NotSet = NOTSET
@@ -365,3 +365,25 @@ class TyperDataGroup(Generic[T]):
 
         setattr(func, "__signature__", signature)
         return func
+
+
+def TyperGroupFromDataclass(
+    clss: type[T],
+    panel: str,
+    prefix: str | None = None,
+    env_prefix: str | None | NotSet = NOTSET,
+    cli_prefix: str | None | NotSet = NOTSET,
+    keep_short: bool = False,
+    keep_panels: bool = False,
+    parsers: dict[type, tuple[str, Callable[[str], Any]]] | None = None,
+) -> TyperGroup[T]:
+    return _TyperDataGroup(
+        panel=panel,
+        prefix=prefix,
+        env_prefix=env_prefix,
+        cli_prefix=cli_prefix,
+        keep_short=keep_short,
+        keep_panels=keep_panels,
+        clss=clss,
+        parsers=parsers or {},
+    ).build()
