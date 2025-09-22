@@ -5,15 +5,19 @@ import inspect
 from collections.abc import Callable, Sequence
 from functools import wraps
 from typing import (
+    Annotated,
     Any,
     Generic,
     NamedTuple,
     Self,
     TypeVar,
+    cast,
 )
 
 import typer
 import typer_di
+
+from typer_group_prefix.parsers import DEFAULT_PARSERS
 
 __version__ = "0.1.8"
 
@@ -285,3 +289,79 @@ class TyperGroup(Generic[T]):
             keep_panels=self.keep_panels,
         )
         return tp.wrap_parser(self.parser)
+
+
+@dataclasses.dataclass(slots=True, kw_only=True)
+class TyperDataGroup(Generic[T]):
+    panel: str
+    prefix: str | None = None
+    env_prefix: str | None | NotSet = NOTSET
+    cli_prefix: str | None | NotSet = NOTSET
+    keep_short: bool = False
+    keep_panels: bool = False
+    clss: type[T]
+    parsers: dict[type, tuple[str, Callable[[str], Any]]] = dataclasses.field(
+        default_factory=dict[type, tuple[str, Callable[[str], Any]]]
+    )
+
+    def build(self) -> TyperGroup[T]:
+        @self._wrapper
+        def _wrapped(**kwargs: Any) -> T:
+            return self.clss(**kwargs)
+
+        return TyperGroup(
+            panel=self.panel,
+            prefix=self.prefix,
+            env_prefix=self.env_prefix,
+            cli_prefix=self.cli_prefix,
+            keep_short=self.keep_short,
+            keep_panels=self.keep_panels,
+            parser=_wrapped,
+        )
+
+    def __call__(self) -> TyperGroup[T]:
+        return self.build()
+
+    def _get_parser(self, f: type[Any]) -> None | Callable[..., Any]:
+        _parser = self.parsers.get(f, DEFAULT_PARSERS.get(f))
+        if _parser is None:
+            return None
+
+        def _wrap(v: str) -> Any:
+            return _parser[1](v)
+
+        _wrap.__name__ = _parser[0]
+        return _wrap
+
+    def make_anno(self, name: str, f: type[Any]) -> Any:
+        if isinstance(f, dataclasses.InitVar):
+            f = cast(type[Any], f.type)  # pyright: ignore[reportUnknownMemberType]
+
+        parser = self._get_parser(f)
+
+        if hasattr(f, "__name__") and f.__name__ == "SecretStr":
+            return Annotated[
+                f,
+                typer.Option(
+                    f"--{name.replace('_', '-')}",
+                    envvar=name.upper(),
+                    prompt=True,
+                    hide_input=True,
+                    parser=parser,
+                ),
+            ]
+        return Annotated[
+            f,
+            typer.Option(f"--{name.replace('_', '-')}", envvar=name.upper(), show_default=True, parser=parser),
+        ]
+
+    def _wrapper(self, func: Callable[..., T]) -> Callable[..., T]:
+        sig = inspect.signature(self.clss)
+
+        signature = inspect.Signature(
+            [f.replace(annotation=self.make_anno(name, f.annotation)) for name, f in sig.parameters.items()],
+            return_annotation=self.clss,
+        )
+
+        setattr(func, "__signature__", signature)
+        return func

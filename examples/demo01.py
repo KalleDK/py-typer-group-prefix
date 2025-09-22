@@ -3,8 +3,6 @@ import enum
 import logging
 import os
 import pathlib
-import urllib
-import urllib.parse
 from datetime import timedelta
 from typing import Annotated, TypeGuard
 
@@ -15,7 +13,7 @@ from rich.console import Console
 from typer_di import Depends, TyperDI
 
 from typer_group_prefix import (
-    TyperGroup,
+    TyperDataGroup,
     __version__,
 )
 
@@ -65,6 +63,10 @@ class Config:
     insecure: bool = DEFAULT_INSECURE
     disable_negotiate: bool = DEFAULT_DISABLE_NEGOTIATE
     timeout: timedelta = DEFAULT_HTTPX_TIMEOUT
+    u: dataclasses.InitVar[str]
+
+    def __post_init__(self, u: str) -> None:
+        pass
 
 
 class LogLevel(enum.IntEnum):
@@ -93,94 +95,11 @@ def get_logs(
     return level
 
 
-def _config_parser(
-    *,
-    scep_logs: None | LogLevel = Depends(get_logs),
-    scep_server: Annotated[
-        str,
-        typer.Option(
-            "-s",
-            "--server",
-            envvar="SERVER",
-            show_default=False,
-        ),
-    ] = "s",
-    scep_username: Annotated[
-        str,
-        typer.Option(
-            "-u",
-            "--username",
-            envvar="USERNAME",
-            show_default=False,
-        ),
-    ] = "u",
-    scep_password: Annotated[
-        pydantic.SecretStr,
-        typer.Option(
-            "-p",
-            "--password",
-            envvar="PASSWORD",
-            prompt=True,
-            parser=pydantic.SecretStr,
-            hide_input=True,
-            show_default=False,
-        ),
-    ],
-    scep_insecure: Annotated[
-        bool,
-        typer.Option(
-            "-k",
-            "--insecure",
-            envvar="INSECURE",
-        ),
-    ] = DEFAULT_INSECURE,
-    scep_capath: Annotated[
-        pathlib.Path | None,
-        typer.Option(
-            "--capath",
-            envvar="CAPATH",
-            exists=True,
-            file_okay=False,
-            readable=True,
-        ),
-    ] = DEFAULT_CAPATH,
-) -> Config:
-    print(scep_logs)
-    parts = urllib.parse.urlsplit(scep_server)
-    if not is_scheme(parts.scheme):
-        parts = urllib.parse.urlsplit(f"{DEFAULT_URL_SCHEME}://{scep_server}{DEFAULT_URL_PATH}")
-
-    if not is_scheme(parts.scheme):
-        raise ValueError("Invalid server url")
-
-    if parts.netloc == "":
-        raise ValueError("Invalid server url")
-
-    netloc_parts = parts.netloc.split(":", 1)
-    if len(netloc_parts) == 2:
-        hostname, port = netloc_parts
-        _port = int(port)
-    else:
-        hostname = netloc_parts[0]
-        _port = None
-
-    return Config(
-        scheme=Scheme(parts.scheme),
-        hostname=hostname,
-        port=_port,
-        username=scep_username,
-        password=scep_password,
-        insecure=scep_insecure,
-        capath=scep_capath,
-        path=parts.path,
-    )
-
-
-CLI_CONFIG = TyperGroup(
+CLI_CONFIG = TyperDataGroup(
+    clss=Config,
     panel=DEFAULT_PANEL,
     env_prefix=DEFAULT_PREFIX,
-    parser=_config_parser,
-)
+).build()
 
 
 def get_logging(
