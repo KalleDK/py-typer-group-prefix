@@ -291,6 +291,28 @@ class TyperGroup(Generic[T]):
         return tp.wrap_parser(self.parser)
 
 
+def typer_group(
+    panel: str,
+    prefix: str | None = None,
+    env_prefix: str | None | NotSet = NOTSET,
+    cli_prefix: str | None | NotSet = NOTSET,
+    keep_short: bool = False,
+    keep_panels: bool = False,
+):
+    def _wrap(c: Callable[..., T]) -> TyperGroup[T]:
+        return TyperGroup(
+            parser=c,
+            panel=panel,
+            prefix=prefix,
+            env_prefix=env_prefix,
+            cli_prefix=cli_prefix,
+            keep_short=keep_short,
+            keep_panels=keep_panels,
+        )
+
+    return _wrap
+
+
 @dataclasses.dataclass(slots=True, kw_only=True)
 class _TyperDataGroup(Generic[T]):
     panel: str
