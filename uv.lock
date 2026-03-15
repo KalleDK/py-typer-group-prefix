@@ -283,7 +283,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/b2/c5/252818853cfe303ce
 
 [[package]]
 name = "typer-group-prefix"
-version = "0.1.11"
+version = "0.1.12"
 source = { editable = "." }
 dependencies = [
     { name = "typer" },
